@@ -1,0 +1,34 @@
+app:
+  name: EngineeringTaskAgent
+  version: 0.1.0
+  log_level: INFO
+
+llm:
+  provider: openai_compatible
+  model: gpt-4o-mini
+  api_base_url: ${OPENAI_API_BASE_URL}
+  api_key: ${OPENAI_API_KEY}
+  timeout_seconds: 30
+
+agent:
+  max_knowledge_matches: 3
+  auto_retrieve_keywords:
+    - benchmark
+    - knowledge
+    - summarize
+    - plan
+    - log
+    - report
+    - automation
+  default_skill: plan_task
+
+tools:
+  shell_timeout_seconds: 20
+  allow_shell: true
+
+knowledge:
+  docs_path: knowledge/docs
+
+remote_agents:
+  report-agent:
+    endpoint: mock://report-agent
