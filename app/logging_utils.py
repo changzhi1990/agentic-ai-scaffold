@@ -1,37 +1,10 @@
-"""Structured logging helpers."""
-
-from __future__ import annotations
-
-import json
 import logging
-import sys
-from typing import Any
+import os
 
 
-class JsonFormatter(logging.Formatter):
-    """Minimal JSON log formatter for auditable tool and runtime traces."""
-
-    def format(self, record: logging.LogRecord) -> str:
-        payload: dict[str, Any] = {
-            "level": record.levelname,
-            "logger": record.name,
-            "message": record.getMessage(),
-        }
-        if hasattr(record, "event"):
-            payload["event"] = getattr(record, "event")
-        if record.exc_info:
-            payload["exception"] = self.formatException(record.exc_info)
-        return json.dumps(payload, ensure_ascii=True)
-
-
-def configure_logging(level: str = "INFO") -> None:
-    """Initialize root logging once."""
-    root = logging.getLogger()
-    if root.handlers:
-        root.setLevel(level.upper())
-        return
-
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(JsonFormatter())
-    root.addHandler(handler)
-    root.setLevel(level.upper())
+def configure_logging(level: str | None = None) -> None:
+    log_level = (level or os.getenv("AGENTIC_BENCHMARK_LOG_LEVEL", "INFO")).upper()
+    logging.basicConfig(
+        level=getattr(logging, log_level, logging.INFO),
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    )

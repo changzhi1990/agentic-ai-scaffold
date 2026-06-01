@@ -1,0 +1,48 @@
+nccl:
+  default:
+    name: default
+    enabled: true
+    binary_path: /opt/nccl-tests/build/all_reduce_perf
+    args:
+      - "-b"
+      - "8"
+      - "-e"
+      - "128M"
+      - "-f"
+      - "2"
+      - "-g"
+      - "2"
+    timeout_seconds: 180
+    repetitions: 1
+  quick:
+    name: quick
+    enabled: true
+    binary_path: /opt/nccl-tests/build/all_reduce_perf
+    args:
+      - "-b"
+      - "1M"
+      - "-e"
+      - "32M"
+      - "-g"
+      - "2"
+    timeout_seconds: 60
+    repetitions: 1
+nvbandwidth:
+  default:
+    name: default
+    enabled: true
+    binary_path: /opt/nvbandwidth/nvbandwidth
+    args:
+      - "--testcase"
+      - "device_to_device_memcpy_read_ce"
+    timeout_seconds: 180
+    repetitions: 1
+  quick:
+    name: quick
+    enabled: true
+    binary_path: /opt/nvbandwidth/nvbandwidth
+    args:
+      - "--testcase"
+      - "device_to_device_memcpy_read_ce"
+    timeout_seconds: 120
+    repetitions: 1

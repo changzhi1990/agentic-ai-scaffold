@@ -1,188 +1,149 @@
-# Agentic AI Scaffold
+# Agentic-AI-Benchmark-Agent
 
-A production-style Python starter framework for building autonomous task-oriented agents that reason with an LLM, retrieve knowledge, select reusable skills, execute tools, and optionally call other agents.
+一个可运行、可扩展、面向 Linux GPU Server 的 Python Benchmark Agent 工程。
 
-## What This Agent Is
+当前阶段只实现两类能力：
 
-This project is an agent runtime, not just a chatbot. It is designed for practical engineering workflows such as Linux command execution, benchmark automation, log analysis, report generation, and future multi-agent orchestration.
+- 系统配置检查
+- 基础能力测试（NCCL / NVBandwidth）
 
-Core runtime layers:
+不包含：
 
-- LLM reasoning layer with an OpenAI-compatible provider abstraction
-- Skill loader for declarative prompt modules
-- Tool registry as the only execution path
-- Local knowledge base and retrieval layer
-- CLI and FastAPI interfaces
-- Agent-to-agent call support through a callable tool
+- 多轮 Agentic workload benchmark
+- Tool calling workflow benchmark
+- Ranking
+- Tuning recommendation
+- 自我优化、自我进化、自动调参、自动学习
+- 多节点调度、Agent 协同
 
-## System Overview
+## Features
 
-Execution flow:
+- 结构化采集 Linux 系统与 GPU/NIC/PCIe 拓扑信息
+- 自动检测命令是否存在，缺失时降级而非崩溃
+- 执行 NCCL benchmark 和 NVBandwidth benchmark
+- 支持 benchmark binary 路径、参数、超时、重复次数配置
+- 生成 JSON 与 Markdown 标准化报告
+- Markdown 报告使用对齐表格，并直接展开命令完整输出
+- 提供 CLI 与 FastAPI 接口
 
-1. Receive and normalize a task request
-2. Load skills and evaluate likely skill matches
-3. Retrieve local knowledge for complex or factual requests
-4. Build an ordered plan
-5. Execute tools when required or explicitly requested
-6. Interpret tool outputs with the LLM provider
-7. Return a structured response with plan, tool calls, knowledge used, and final answer
+## Project Layout
 
-The default runtime works offline using a deterministic fallback LLM behavior. If you provide an OpenAI-style endpoint and API key, it will call `/chat/completions` instead.
+```text
+agentic_ai_benchmark_agent/
+  README.md
+  AGENT.md
+  SKILLS.md
+  requirements.txt
+  .env.example
+  config/
+    settings.yaml
+    benchmark_profiles.yaml
+  app/
+    main.py
+    agent.py
+    orchestrator.py
+    models.py
+  inspection/
+    system_inspector.py
+    parsers.py
+    topology.py
+  benchmarks/
+    nccl_runner.py
+    nvbandwidth_runner.py
+    metrics.py
+    parsers.py
+  tools/
+    shell_tool.py
+    file_tool.py
+  reports/
+    generator.py
+    markdown_report.py
+    json_report.py
+  interfaces/
+    cli.py
+    api.py
+  data/
+    results/
+    reports/
+  tests/
+    test_system_inspector.py
+    test_nccl_runner.py
+    test_nvbandwidth_runner.py
+    test_report.py
+```
 
-## Architecture Summary
+## Requirements
 
-- `app/`: orchestration, models, planner, memory, logging, config bootstrap
-- `llm/`: provider abstraction and OpenAI-compatible backend
-- `tools/`: structured tool definitions and registry
-- `skills/`: markdown skills with YAML front matter
-- `knowledge/`: local document store and retriever
-- `interfaces/`: CLI and FastAPI API
-- `tests/`: starter tests for runtime behavior
+- Python 3.10+
+- Linux
+- 可选命令：`lscpu`、`numactl`、`lspci`、`nvidia-smi`、`sysctl`、`lsmod`
+- 可选 benchmark binary：
+  - NCCL：`all_reduce_perf`
+  - NVBandwidth：`nvbandwidth`
 
 ## Install
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Configure
-
-1. Copy `.env.example` to `.env` if you want environment-driven overrides.
-2. Review `config/settings.yaml`.
-3. Optionally set:
+如果目标机器没有 `python3-venv`，可以退化为用户级安装：
 
 ```bash
-export OPENAI_API_BASE_URL="http://localhost:8000/v1"
-export OPENAI_API_KEY="your-key"
-export OPENAI_MODEL="gpt-4o-mini"
-export LOG_LEVEL="INFO"
+pip3 install --user --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt
 ```
 
-If no API credentials are set, the scaffold uses a deterministic local fallback response generator.
-
-## Run CLI
+## CLI
 
 ```bash
-source .venv/bin/activate
-python -m app.main run "Summarize the local knowledge about benchmark automation"
+python3 -m app.main run
+python3 -m app.main inspect
+python3 -m app.main nccl --profile default
+python3 -m app.main nvbandwidth --profile default
+python3 -m app.main run --output-dir data/reports/manual
 ```
 
-Pretty output:
+## API
+
+启动：
 
 ```bash
-python -m app.main run "Read /etc/hostname" --pretty
+uvicorn interfaces.api:api --host 0.0.0.0 --port 8000
 ```
 
-## Run API Server
+示例：
 
 ```bash
-source .venv/bin/activate
-uvicorn interfaces.api:app --host 0.0.0.0 --port 8080 --reload
+curl http://127.0.0.1:8000/health
+curl -X POST http://127.0.0.1:8000/inspect
+curl -X POST http://127.0.0.1:8000/benchmark/nccl -H 'content-type: application/json' -d '{"profile_name":"default"}'
+curl -X POST http://127.0.0.1:8000/benchmark/nvbandwidth -H 'content-type: application/json' -d '{"profile_name":"default"}'
+curl -X POST http://127.0.0.1:8000/run -H 'content-type: application/json' -d '{"run_nccl":true,"run_nvbandwidth":true}'
 ```
 
-## API Usage
+## Output
 
-`POST /run`
+完整流程返回结构示例：
 
-Example:
-
-```bash
-curl -X POST http://127.0.0.1:8080/run \
-  -H "Content-Type: application/json" \
-  -d '{
-    "task": "Plan a benchmark automation workflow and summarize the local knowledge",
-    "context": {"source": "curl-demo"}
-  }'
+```json
+{
+  "inspection": {},
+  "benchmarks": {
+    "nccl": {},
+    "nvbandwidth": {}
+  },
+  "report_paths": {
+    "json": "data/reports/benchmark_report_20260601_120000.json",
+    "markdown": "data/reports/benchmark_report_20260601_120000.md"
+  },
+  "status": "success",
+  "warnings": []
+}
 ```
 
-## Add a Skill
+## Notes
 
-1. Create a markdown file under `skills/`.
-2. Add YAML front matter with:
-   - `name`
-   - `description`
-   - `when_to_use`
-   - `required_tools`
-   - `examples`
-3. Add the instruction body below the front matter.
-
-Example:
-
-```markdown
----
-name: inspect_logs
-description: Analyze operational logs for errors.
-when_to_use:
-  - when the user asks about logs, incidents, or runtime failures
-required_tools:
-  - read_file
-  - run_shell_command
-examples:
-  - "Inspect the nginx error log and summarize the failures."
----
-Read the target log, extract repeating failures, and summarize the probable cause.
-```
-
-## Add a Tool
-
-1. Create or update a tool module under `tools/`.
-2. Define pydantic input and output schemas.
-3. Wrap the handler in a `StructuredTool`.
-4. Register it in `AgentApp.from_project_root()`.
-
-Minimal example:
-
-```python
-tool = StructuredTool(
-    name="my_tool",
-    description="Example tool",
-    input_model=MyInput,
-    output_model=MyOutput,
-    handler=my_handler,
-)
-registry.register(tool)
-```
-
-## Add Knowledge Documents
-
-Drop markdown, text, or `.log` files into `knowledge/docs/`. The keyword retriever loads them at runtime and returns scored snippets.
-
-## Example Usage
-
-Summarize knowledge:
-
-```bash
-python -m app.main run "What does the knowledge base say about Linux command execution?"
-```
-
-Force a specific tool:
-
-```bash
-python -m app.main run "Read a file" \
-  --context '{"force_tool":"read_file","tool_args":{"path":"README.md"}}'
-```
-
-Delegate to another agent:
-
-```bash
-python -m app.main run "Ask the report agent to summarize benchmark results" \
-  --context '{
-    "force_tool": "call_agent",
-    "tool_args": {
-      "agent_name": "report-agent",
-      "endpoint": "mock://report-agent",
-      "task": "Summarize benchmark results",
-      "context": {"run_id": "demo-01"}
-    }
-  }'
-```
-
-## Test
-
-```bash
-source .venv/bin/activate
-pytest -q
-```
+- 硬件信息只读取系统可获取数据，不伪造 BIOS、驱动、CUDA、NCCL 版本。
+- 当命令不存在、binary 缺失、解析失败、GPU 缺失时，流程保持可运行并返回 warning。

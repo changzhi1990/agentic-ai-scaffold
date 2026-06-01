@@ -1,7 +1,11 @@
-"""CLI entrypoint module."""
+from __future__ import annotations
 
-from interfaces.cli import cli_app
+from interfaces.cli import app
+
+
+def main() -> None:
+    app()
 
 
 if __name__ == "__main__":
-    cli_app()
+    main()

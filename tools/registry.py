@@ -1,63 +1,51 @@
-"""Registry and execution protocol for tools."""
-
 from __future__ import annotations
 
-import logging
+from pathlib import Path
 
-from pydantic import ValidationError
-
-from app.models import ToolCallRecord
-from tools.base import StructuredTool
-
-
-LOGGER = logging.getLogger(__name__)
+from app.models import FinalRunResult
+from benchmarks.nccl_runner import NcclBenchmarkRunner
+from benchmarks.nvbandwidth_runner import NvBandwidthBenchmarkRunner
+from reports.generator import ReportGenerator
+from tools.file_tool import FileTool
+from tools.parser_tool import ParserTool
+from tools.shell_tool import ShellTool
 
 
 class ToolRegistry:
-    """Stores tools and executes them with structured error capture."""
-
     def __init__(self) -> None:
-        self._tools: dict[str, StructuredTool] = {}
+        self.shell_tool = ShellTool()
+        self.file_tool = FileTool()
+        self.parser_tool = ParserTool()
 
-    def register(self, tool: StructuredTool) -> None:
-        self._tools[tool.name] = tool
+    def run_shell_command(self, command: str, timeout: int | None = None) -> dict:
+        return self.shell_tool.run(command, timeout=timeout)
 
-    def list_tools(self) -> list[str]:
-        return sorted(self._tools.keys())
+    def read_file(self, path: str) -> dict:
+        return self.file_tool.read(path)
 
-    def execute(self, tool_name: str, arguments: dict) -> ToolCallRecord:
-        tool = self._tools.get(tool_name)
-        if tool is None:
-            return ToolCallRecord(
-                tool_name=tool_name,
-                arguments=arguments,
-                success=False,
-                output={},
-                error=f"Unknown tool: {tool_name}",
-            )
-        try:
-            output = tool.execute(arguments)
-            return ToolCallRecord(
-                tool_name=tool_name,
-                arguments=arguments,
-                success=True,
-                output=output,
-                error=None,
-            )
-        except ValidationError as exc:
-            return ToolCallRecord(
-                tool_name=tool_name,
-                arguments=arguments,
-                success=False,
-                output={},
-                error=f"validation error: {exc}",
-            )
-        except Exception as exc:  # pragma: no cover - defensive path
-            LOGGER.exception("Tool execution failed", extra={"event": "tool_failed"})
-            return ToolCallRecord(
-                tool_name=tool_name,
-                arguments=arguments,
-                success=False,
-                output={},
-                error=str(exc),
-            )
+    def file_exists(self, path: str) -> dict:
+        return self.file_tool.exists(path)
+
+    def parse_command_output(self, parser_name: str, raw_text: str) -> dict:
+        return {"parsed": self.parser_tool.parse(parser_name, raw_text)}
+
+    def run_nccl_benchmark(self, profile: dict) -> dict:
+        runner = NcclBenchmarkRunner(shell_tool=self.shell_tool)
+        return {"result": runner.run(profile).model_dump(mode="json")}
+
+    def run_nvbandwidth_benchmark(self, profile: dict) -> dict:
+        runner = NvBandwidthBenchmarkRunner(shell_tool=self.shell_tool)
+        return {"result": runner.run(profile).model_dump(mode="json")}
+
+    def generate_report(self, inspection_result: dict, benchmark_results: dict, output_dir: str) -> dict:
+        final = FinalRunResult.model_validate(
+            {
+                "inspection": inspection_result,
+                "benchmarks": benchmark_results,
+                "report_paths": {},
+                "status": inspection_result.get("status", "partial_success"),
+                "warnings": inspection_result.get("warnings", []),
+            }
+        )
+        generator = ReportGenerator(output_dir=Path(output_dir))
+        return {"report_paths": generator.generate(final)}

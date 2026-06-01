@@ -1,27 +1,43 @@
-"""FastAPI interface for the agent runtime."""
-
 from __future__ import annotations
-
-from pathlib import Path
 
 from fastapi import FastAPI
 
-from app.agent import AgentApp, TaskAgent
-from app.models import TaskRequest, TaskResponse
+from app.agent import BenchmarkAgent
+from app.logging_utils import configure_logging
+from app.models import BenchmarkRequest, RunRequest
 
 
-project_root = Path(__file__).resolve().parents[1]
-runtime = AgentApp.from_project_root(project_root)
-agent = TaskAgent(runtime)
-
-app = FastAPI(title="Agentic AI Scaffold API", version=runtime.config.app_version)
+configure_logging()
+api = FastAPI(title="Agentic-AI-Benchmark-Agent", version="0.1.0")
 
 
-@app.get("/health")
+def _agent() -> BenchmarkAgent:
+    return BenchmarkAgent()
+
+
+@api.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.post("/run", response_model=TaskResponse)
-def run_task(request: TaskRequest) -> TaskResponse:
-    return agent.run(request)
+@api.post("/inspect")
+def inspect() -> dict:
+    return _agent().inspect().model_dump(mode="json")
+
+
+@api.post("/benchmark/nccl")
+def benchmark_nccl(payload: BenchmarkRequest | None = None) -> dict:
+    request = payload or BenchmarkRequest()
+    return _agent().run_nccl(request.profile_name).model_dump(mode="json")
+
+
+@api.post("/benchmark/nvbandwidth")
+def benchmark_nvbandwidth(payload: BenchmarkRequest | None = None) -> dict:
+    request = payload or BenchmarkRequest()
+    return _agent().run_nvbandwidth(request.profile_name).model_dump(mode="json")
+
+
+@api.post("/run")
+def run(payload: RunRequest | None = None) -> dict:
+    request = payload or RunRequest()
+    return _agent().run(request).model_dump(mode="json")

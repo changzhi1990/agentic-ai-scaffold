@@ -1,1 +1,1 @@
-"""Interfaces package."""
+"""CLI and API interfaces."""

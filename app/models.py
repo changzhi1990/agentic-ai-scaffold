@@ -1,103 +1,193 @@
-"""Shared pydantic models for runtime state and API contracts."""
-
 from __future__ import annotations
 
-from enum import Enum
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field
-
-
-class ResponseStatus(str, Enum):
-    """Possible response states for the agent runtime."""
-
-    SUCCESS = "success"
-    PARTIAL_SUCCESS = "partial_success"
-    FAILED = "failed"
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class TaskRequest(BaseModel):
-    """Normalized incoming request."""
-
-    task: str = Field(..., min_length=1)
-    context: dict[str, Any] = Field(default_factory=dict)
-
-
-class KnowledgeMatch(BaseModel):
-    """Single retrieved knowledge snippet."""
-
-    document_id: str
-    title: str
-    score: float
-    snippet: str
-    source_path: str
+class CommandExecutionResult(BaseModel):
+    command: str
+    stdout: str = ""
+    stderr: str = ""
+    exit_code: int = 0
+    timed_out: bool = False
+    duration_seconds: float | None = None
 
 
-class SkillDefinition(BaseModel):
-    """Declarative skill metadata loaded from markdown."""
+class CpuInfo(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    architecture: str | None = None
+    cpus: int | None = None
+    threads_per_core: int | None = None
+    cores_per_socket: int | None = None
+    sockets: int | None = None
+    numa_nodes: int | None = None
+    model_name: str | None = None
 
+
+class NumaNode(BaseModel):
+    node_id: int
+    cpus: list[int] = Field(default_factory=list)
+    size_mb: int | None = None
+
+
+class SystemMemoryInfo(BaseModel):
+    total_kb: int | None = None
+    available_kb: int | None = None
+
+
+class GpuInfo(BaseModel):
+    index: int | None = None
+    name: str | None = None
+    uuid: str | None = None
+    pci_bus_id: str | None = None
+    driver_version: str | None = None
+    memory_total_mb: int | None = None
+
+
+class NicInfo(BaseModel):
+    name: str | None = None
+    pci_bus_id: str | None = None
+    description: str | None = None
+
+
+class PciDeviceInfo(BaseModel):
+    slot: str
+    description: str
+
+
+class OperatingSystemInfo(BaseModel):
+    name: str | None = None
+    version_id: str | None = None
+    pretty_name: str | None = None
+
+
+class BiosInfo(BaseModel):
+    vendor: str | None = None
+    version: str | None = None
+    product_name: str | None = None
+
+
+class SoftwareStack(BaseModel):
+    os: OperatingSystemInfo = Field(default_factory=OperatingSystemInfo)
+    kernel_version: str | None = None
+    kernel_full: str | None = None
+    driver_version: str | None = None
+    cuda_version: str | None = None
+    nccl_version: str | None = None
+    iommu_enabled: bool | None = None
+    iommu_details: list[str] = Field(default_factory=list)
+
+
+class TopologyLink(BaseModel):
+    source: str
+    target: str
+    link_type: str
+
+
+class TopologySummary(BaseModel):
+    gpu_topology_available: bool = False
+    nic_topology_available: bool = False
+    headers: list[str] = Field(default_factory=list)
+    matrix: dict[str, dict[str, str]] = Field(default_factory=dict)
+    gpu_nic_links: list[TopologyLink] = Field(default_factory=list)
+
+
+class InspectionResult(BaseModel):
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    status: Literal["success", "partial_success", "failed"] = "success"
+    bios: BiosInfo = Field(default_factory=BiosInfo)
+    cpu: CpuInfo = Field(default_factory=CpuInfo)
+    numa_nodes: list[NumaNode] = Field(default_factory=list)
+    memory: SystemMemoryInfo = Field(default_factory=SystemMemoryInfo)
+    gpus: list[GpuInfo] = Field(default_factory=list)
+    nics: list[NicInfo] = Field(default_factory=list)
+    pci_devices: list[PciDeviceInfo] = Field(default_factory=list)
+    software: SoftwareStack = Field(default_factory=SoftwareStack)
+    topology: TopologySummary = Field(default_factory=TopologySummary)
+    system_parameters: dict[str, Any] = Field(default_factory=dict)
+    environment: dict[str, str] = Field(default_factory=dict)
+    raw_command_notes: dict[str, str] = Field(default_factory=dict)
+    raw_command_outputs: dict[str, str] = Field(default_factory=dict)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class BenchmarkSample(BaseModel):
+    label: str
+    bandwidth_gbps: float | None = None
+    latency_ms: float | None = None
+    latency_us: float | None = None
+    raw: dict[str, Any] = Field(default_factory=dict)
+
+
+class BenchmarkMetrics(BaseModel):
+    peak_bandwidth_gbps: float | None = None
+    average_bandwidth_gbps: float | None = None
+    average_latency_ms: float | None = None
+    average_latency_us: float | None = None
+    samples: list[BenchmarkSample] = Field(default_factory=list)
+
+
+class BenchmarkResult(BaseModel):
     name: str
-    description: str
-    when_to_use: list[str] = Field(default_factory=list)
-    instructions: str
-    required_tools: list[str] = Field(default_factory=list)
-    examples: list[str] = Field(default_factory=list)
-    source_path: str
-
-
-class PlanStep(BaseModel):
-    """Single execution-plan step."""
-
-    step_id: str
-    description: str
-    reason: str
-    tool_name: str | None = None
-
-
-class ToolCallRecord(BaseModel):
-    """Auditable record of one tool execution."""
-
-    tool_name: str
-    arguments: dict[str, Any]
-    success: bool
-    output: dict[str, Any] = Field(default_factory=dict)
+    status: Literal["passed", "failed", "missing_binary", "timeout", "skipped"] = "skipped"
+    profile_name: str | None = None
+    binary_path: str | None = None
+    command: str | None = None
+    metrics: BenchmarkMetrics = Field(default_factory=BenchmarkMetrics)
+    parsed_output: dict[str, Any] = Field(default_factory=dict)
+    stdout: str = ""
+    stderr: str = ""
+    exit_code: int | None = None
+    completed_runs: int = 0
+    warnings: list[str] = Field(default_factory=list)
     error: str | None = None
 
 
-class LLMResult(BaseModel):
-    """Output returned by the reasoning backend."""
-
-    final_answer: str
-    raw_response: dict[str, Any] = Field(default_factory=dict)
+class BenchmarkSuiteResult(BaseModel):
+    nccl: BenchmarkResult | None = None
+    nvbandwidth: BenchmarkResult | None = None
 
 
-class TaskResponse(BaseModel):
-    """Structured result returned by the agent."""
-
-    task: str
-    selected_skills: list[str] = Field(default_factory=list)
-    knowledge_used: list[KnowledgeMatch] = Field(default_factory=list)
-    plan: list[PlanStep] = Field(default_factory=list)
-    tool_calls: list[ToolCallRecord] = Field(default_factory=list)
-    final_answer: str
-    status: ResponseStatus
+class FinalRunResult(BaseModel):
+    inspection: InspectionResult
+    benchmarks: BenchmarkSuiteResult
+    report_paths: dict[str, str]
+    status: Literal["success", "partial_success", "failed"]
+    warnings: list[str] = Field(default_factory=list)
 
 
-class AppConfig(BaseModel):
-    """Normalized application configuration."""
+class BenchmarkProfile(BaseModel):
+    name: str = "default"
+    enabled: bool = True
+    binary_path: str
+    args: list[str] = Field(default_factory=list)
+    timeout_seconds: int = 60
+    repetitions: int = 1
 
-    app_name: str = "EngineeringTaskAgent"
-    app_version: str = "0.1.0"
-    log_level: str = "INFO"
-    llm_provider: str = "openai_compatible"
-    llm_model: str = "gpt-4o-mini"
-    llm_api_base_url: str | None = None
-    llm_api_key: str | None = None
-    llm_timeout_seconds: int = 30
-    knowledge_docs_path: str = "knowledge/docs"
-    max_knowledge_matches: int = 3
-    auto_retrieve_keywords: list[str] = Field(default_factory=list)
-    default_skill: str = "plan_task"
-    shell_timeout_seconds: int = 20
-    allow_shell: bool = True
-    remote_agents: dict[str, dict[str, Any]] = Field(default_factory=dict)
+
+class Settings(BaseModel):
+    agent_name: str = "Agentic-AI-Benchmark-Agent"
+    report_output_dir: str = "data/reports"
+    result_output_dir: str = "data/results"
+    default_command_timeout_seconds: int = 30
+    inspect_dmesg: bool = False
+    selected_env_vars: list[str] = Field(default_factory=list)
+    system_parameters: list[str] = Field(default_factory=list)
+    enable_benchmarks: dict[str, bool] = Field(default_factory=dict)
+    benchmark_profiles_file: str = "config/benchmark_profiles.yaml"
+
+
+class RunRequest(BaseModel):
+    inspect_only: bool = False
+    run_nccl: bool = True
+    run_nvbandwidth: bool = True
+    generate_reports: bool = True
+    nccl_profile: str = "default"
+    nvbandwidth_profile: str = "default"
+    output_dir: str | None = None
+
+
+class BenchmarkRequest(BaseModel):
+    profile_name: str = "default"

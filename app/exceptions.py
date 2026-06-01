@@ -1,21 +1,10 @@
-"""Custom exceptions for the agent runtime."""
+class BenchmarkAgentError(Exception):
+    """Base exception for the benchmark agent."""
 
 
-class AgentError(Exception):
-    """Base exception for agent runtime failures."""
+class ConfigurationError(BenchmarkAgentError):
+    """Raised when configuration files are invalid."""
 
 
-class ConfigurationError(AgentError):
-    """Raised when configuration is invalid."""
-
-
-class KnowledgeError(AgentError):
-    """Raised when knowledge retrieval fails."""
-
-
-class LLMError(AgentError):
-    """Raised when the configured LLM backend fails."""
-
-
-class ToolExecutionError(AgentError):
-    """Raised when a tool cannot be executed."""
+class CommandExecutionError(BenchmarkAgentError):
+    """Raised when a shell command cannot be executed."""
