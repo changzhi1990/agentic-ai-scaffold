@@ -134,6 +134,7 @@ class BenchmarkResult(BaseModel):
     status: Literal["passed", "failed", "missing_binary", "timeout", "skipped"] = "skipped"
     profile_name: str | None = None
     binary_path: str | None = None
+    testcase: str | None = None
     command: str | None = None
     metrics: BenchmarkMetrics = Field(default_factory=BenchmarkMetrics)
     parsed_output: dict[str, Any] = Field(default_factory=dict)

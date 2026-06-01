@@ -59,6 +59,7 @@ COEFFICIENT_OF_VARIATION device_to_device_memcpy_read_ce 0.13
     )
 
     assert result.status == "passed"
+    assert result.testcase == "device_to_device_memcpy_read_ce"
     assert result.command == "/opt/nvbandwidth/nvbandwidth --testcase device_to_device_memcpy_read_ce"
     assert result.metrics.peak_bandwidth_gbps == 56.51
     assert result.metrics.average_bandwidth_gbps == 47.8

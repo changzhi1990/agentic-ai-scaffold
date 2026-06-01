@@ -21,14 +21,16 @@ class BaseBenchmarkRunner(ABC):
 
     def run(self, profile: dict | BenchmarkProfile) -> BenchmarkResult:
         config = profile if isinstance(profile, BenchmarkProfile) else BenchmarkProfile.model_validate(profile)
+        testcase = self._extract_testcase(config.args)
         if not config.enabled:
-            return BenchmarkResult(name=self.benchmark_name, status="skipped", profile_name=config.name)
+            return BenchmarkResult(name=self.benchmark_name, status="skipped", profile_name=config.name, testcase=testcase)
         if not self.shell_tool.exists(config.binary_path):
             return BenchmarkResult(
                 name=self.benchmark_name,
                 status="missing_binary",
                 profile_name=config.name,
                 binary_path=config.binary_path,
+                testcase=testcase,
                 error=f"Benchmark binary not found: {config.binary_path}",
                 warnings=[f"{self.benchmark_name} binary not found"],
             )
@@ -51,6 +53,7 @@ class BaseBenchmarkRunner(ABC):
                     status="timeout",
                     profile_name=config.name,
                     binary_path=config.binary_path,
+                    testcase=testcase,
                     command=command,
                     stdout="\n".join(stdout_parts),
                     stderr="\n".join(stderr_parts),
@@ -64,6 +67,7 @@ class BaseBenchmarkRunner(ABC):
                     status="failed",
                     profile_name=config.name,
                     binary_path=config.binary_path,
+                    testcase=testcase,
                     command=command,
                     stdout="\n".join(stdout_parts),
                     stderr="\n".join(stderr_parts),
@@ -83,6 +87,7 @@ class BaseBenchmarkRunner(ABC):
             status=status,
             profile_name=config.name,
             binary_path=config.binary_path,
+            testcase=testcase,
             command=command,
             metrics=metrics,
             parsed_output={"runs": parsed_runs},
@@ -93,3 +98,9 @@ class BaseBenchmarkRunner(ABC):
             warnings=warnings,
             error=None if metrics.samples else "Unable to parse benchmark metrics from output",
         )
+
+    def _extract_testcase(self, args: list[str]) -> str | None:
+        for index, arg in enumerate(args):
+            if arg == "--testcase" and index + 1 < len(args):
+                return args[index + 1]
+        return None

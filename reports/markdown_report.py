@@ -33,10 +33,11 @@ def _render_table(headers: list[str], rows: list[list[object]]) -> str:
 
 def _benchmark_rows(result: BenchmarkResult | None) -> list[object]:
     if result is None:
-        return ["not_run", "not_run", "n/a", "0", "n/a", "n/a", "n/a", "n/a"]
+        return ["not_run", "not_run", "n/a", "n/a", "0", "n/a", "n/a", "n/a", "n/a"]
     return [
         result.name,
         result.status,
+        result.testcase or "n/a",
         result.binary_path or "n/a",
         result.completed_runs,
         result.metrics.peak_bandwidth_gbps,
@@ -131,7 +132,7 @@ def write_markdown_report(result: FinalRunResult, output_path: Path) -> Path:
         "## Benchmark Performance",
         "",
         _render_table(
-            ["Benchmark", "Status", "Binary", "Runs", "Peak BW", "Avg BW", "Avg Lat ms", "Avg Lat us"],
+            ["Benchmark", "Status", "Test Case", "Binary", "Runs", "Peak BW", "Avg BW", "Avg Lat ms", "Avg Lat us"],
             benchmark_rows,
         ),
         "",

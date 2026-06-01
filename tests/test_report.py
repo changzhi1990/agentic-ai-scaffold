@@ -49,11 +49,13 @@ def test_report_generator_writes_json_and_markdown(tmp_path: Path) -> None:
         nccl_alltoall=BenchmarkResult(
             name="nccl_alltoall",
             status="passed",
+            testcase="alltoall_perf",
             metrics=BenchmarkMetrics(peak_bandwidth_gbps=30.48),
         ),
         nvbandwidth=BenchmarkResult(
             name="nvbandwidth",
             status="passed",
+            testcase="device_to_device_memcpy_read_ce",
             metrics=BenchmarkMetrics(peak_bandwidth_gbps=312.5),
         ),
     )
@@ -82,6 +84,7 @@ def test_report_generator_writes_json_and_markdown(tmp_path: Path) -> None:
     assert "Section        | Value" in md_data
     assert "Benchmark     | Status" in md_data
     assert "nccl_alltoall" in md_data
+    assert "device_to_device_memcpy_read_ce" in md_data
     assert "Command  | Output Line | Content" in md_data
     assert "Architecture: x86_64" in md_data
     assert "collected" not in md_data
