@@ -3,29 +3,78 @@ nccl:
     name: default
     enabled: true
     binary_path: /opt/nccl-tests/build/all_reduce_perf
+    env:
+      NCCL_NTHREADS: "128"
+      NCCL_MIN_NCHANNELS: "8"
+      NCCL_P2P_LEVEL: "SYS"
     args:
       - "-b"
-      - "8"
+      - "128"
       - "-e"
-      - "128M"
+      - "8G"
       - "-f"
       - "2"
       - "-g"
-      - "2"
-    timeout_seconds: 180
+      - "8"
+    timeout_seconds: 1800
     repetitions: 1
   quick:
     name: quick
     enabled: true
     binary_path: /opt/nccl-tests/build/all_reduce_perf
+    env:
+      NCCL_NTHREADS: "128"
+      NCCL_MIN_NCHANNELS: "8"
+      NCCL_P2P_LEVEL: "SYS"
     args:
       - "-b"
-      - "1M"
+      - "128"
       - "-e"
-      - "32M"
-      - "-g"
+      - "8G"
+      - "-f"
       - "2"
-    timeout_seconds: 60
+      - "-g"
+      - "8"
+    timeout_seconds: 1800
+    repetitions: 1
+nccl_alltoall:
+  default:
+    name: default
+    enabled: true
+    binary_path: /opt/nccl-tests/build/alltoall_perf
+    env:
+      NCCL_NTHREADS: "128"
+      NCCL_MIN_NCHANNELS: "8"
+      NCCL_P2P_LEVEL: "SYS"
+    args:
+      - "-b"
+      - "128"
+      - "-e"
+      - "8G"
+      - "-f"
+      - "2"
+      - "-g"
+      - "8"
+    timeout_seconds: 1800
+    repetitions: 1
+  quick:
+    name: quick
+    enabled: true
+    binary_path: /opt/nccl-tests/build/alltoall_perf
+    env:
+      NCCL_NTHREADS: "128"
+      NCCL_MIN_NCHANNELS: "8"
+      NCCL_P2P_LEVEL: "SYS"
+    args:
+      - "-b"
+      - "128"
+      - "-e"
+      - "8G"
+      - "-f"
+      - "2"
+      - "-g"
+      - "8"
+    timeout_seconds: 1800
     repetitions: 1
 nvbandwidth:
   default:

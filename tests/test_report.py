@@ -46,6 +46,11 @@ def test_report_generator_writes_json_and_markdown(tmp_path: Path) -> None:
             metrics=BenchmarkMetrics(),
             warnings=["binary missing"],
         ),
+        nccl_alltoall=BenchmarkResult(
+            name="nccl_alltoall",
+            status="passed",
+            metrics=BenchmarkMetrics(peak_bandwidth_gbps=30.48),
+        ),
         nvbandwidth=BenchmarkResult(
             name="nvbandwidth",
             status="passed",
@@ -75,7 +80,8 @@ def test_report_generator_writes_json_and_markdown(tmp_path: Path) -> None:
     assert "## Benchmark Performance" in md_data
     assert "```text" in md_data
     assert "Section        | Value" in md_data
-    assert "Benchmark   | Status" in md_data
+    assert "Benchmark     | Status" in md_data
+    assert "nccl_alltoall" in md_data
     assert "Command  | Output Line | Content" in md_data
     assert "Architecture: x86_64" in md_data
     assert "collected" not in md_data

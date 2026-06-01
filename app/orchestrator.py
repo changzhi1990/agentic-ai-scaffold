@@ -42,6 +42,17 @@ class BenchmarkOrchestrator:
             )
         return self.nccl_runner.run(profile)
 
+    def run_nccl_alltoall(self, profile_name: str = "default") -> BenchmarkResult:
+        profile = self.benchmark_profiles.get("nccl_alltoall", {}).get(profile_name)
+        if profile is None:
+            return BenchmarkResult(
+                name="nccl_alltoall",
+                status="failed",
+                profile_name=profile_name,
+                error=f"NCCL alltoall profile not found: {profile_name}",
+            )
+        return self.nccl_runner.run(profile)
+
     def run_nvbandwidth(self, profile_name: str = "default") -> BenchmarkResult:
         profile = self.benchmark_profiles.get("nvbandwidth", {}).get(profile_name)
         if profile is None:
@@ -63,6 +74,15 @@ class BenchmarkOrchestrator:
             warnings.extend(benchmarks.nccl.warnings)
             if benchmarks.nccl.error:
                 warnings.append(benchmarks.nccl.error)
+        if (
+            not request.inspect_only
+            and request.run_nccl
+            and self.settings.enable_benchmarks.get("nccl_alltoall", True)
+        ):
+            benchmarks.nccl_alltoall = self.run_nccl_alltoall(request.nccl_profile)
+            warnings.extend(benchmarks.nccl_alltoall.warnings)
+            if benchmarks.nccl_alltoall.error:
+                warnings.append(benchmarks.nccl_alltoall.error)
         if not request.inspect_only and request.run_nvbandwidth and self.settings.enable_benchmarks.get("nvbandwidth", True):
             benchmarks.nvbandwidth = self.run_nvbandwidth(request.nvbandwidth_profile)
             warnings.extend(benchmarks.nvbandwidth.warnings)
@@ -72,6 +92,8 @@ class BenchmarkOrchestrator:
         statuses = [inspection.status]
         if benchmarks.nccl:
             statuses.append("success" if benchmarks.nccl.status == "passed" else "partial_success")
+        if benchmarks.nccl_alltoall:
+            statuses.append("success" if benchmarks.nccl_alltoall.status == "passed" else "partial_success")
         if benchmarks.nvbandwidth:
             statuses.append("success" if benchmarks.nvbandwidth.status == "passed" else "partial_success")
         overall_status = "failed" if all(status == "failed" for status in statuses) else "partial_success"

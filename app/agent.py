@@ -19,6 +19,9 @@ class BenchmarkAgent:
     def run_nccl(self, profile_name: str = "default") -> BenchmarkResult:
         return self.orchestrator.run_nccl(profile_name)
 
+    def run_nccl_alltoall(self, profile_name: str = "default") -> BenchmarkResult:
+        return self.orchestrator.run_nccl_alltoall(profile_name)
+
     def run_nvbandwidth(self, profile_name: str = "default") -> BenchmarkResult:
         return self.orchestrator.run_nvbandwidth(profile_name)
 

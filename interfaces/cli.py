@@ -27,7 +27,11 @@ def _print_run_summary(final: FinalRunResult) -> None:
     table.add_column("Section")
     table.add_column("Status")
     table.add_row("Inspection", final.inspection.status)
-    table.add_row("NCCL", final.benchmarks.nccl.status if final.benchmarks.nccl else "not_run")
+    table.add_row("NCCL AllReduce", final.benchmarks.nccl.status if final.benchmarks.nccl else "not_run")
+    table.add_row(
+        "NCCL AllToAll",
+        final.benchmarks.nccl_alltoall.status if final.benchmarks.nccl_alltoall else "not_run",
+    )
     table.add_row("NVBandwidth", final.benchmarks.nvbandwidth.status if final.benchmarks.nvbandwidth else "not_run")
     table.add_row("Overall", final.status)
     console.print(table)
@@ -74,8 +78,11 @@ def nccl(
     profiles: str | None = typer.Option(None, help="Path to benchmark_profiles.yaml"),
 ) -> None:
     agent = _agent(settings, profiles)
-    result = agent.run_nccl(profile)
-    console.print_json(json.dumps(result.model_dump(mode="json"), indent=2))
+    result = {
+        "all_reduce": agent.run_nccl(profile).model_dump(mode="json"),
+        "alltoall": agent.run_nccl_alltoall(profile).model_dump(mode="json"),
+    }
+    console.print_json(json.dumps(result, indent=2))
 
 
 @app.command()

@@ -2,11 +2,14 @@ from benchmarks.nccl_runner import NcclBenchmarkRunner
 
 
 def test_nccl_runner_parses_metrics_from_output() -> None:
+    commands = []
+
     class FakeShellTool:
         def exists(self, command: str) -> bool:
             return True
 
         def run(self, command: str, timeout=None):
+            commands.append(command)
             stdout = """
 # nThread 1 nGpus 2 minBytes 8 maxBytes 67108864 step: 2
       size         count    type   redop    root     time   algbw   busbw #wrong
@@ -21,6 +24,11 @@ def test_nccl_runner_parses_metrics_from_output() -> None:
             "name": "smoke",
             "binary_path": "/opt/nccl-tests/build/all_reduce_perf",
             "args": ["-b", "1M", "-e", "2M", "-g", "2"],
+            "env": {
+                "NCCL_NTHREADS": "128",
+                "NCCL_MIN_NCHANNELS": "8",
+                "NCCL_P2P_LEVEL": "SYS",
+            },
             "timeout_seconds": 30,
         }
     )
@@ -28,6 +36,9 @@ def test_nccl_runner_parses_metrics_from_output() -> None:
     assert result.status == "passed"
     assert result.metrics.peak_bandwidth_gbps == 93.4
     assert result.metrics.average_latency_ms == 16.17
+    assert commands[0].startswith(
+        "NCCL_MIN_NCHANNELS=8 NCCL_NTHREADS=128 NCCL_P2P_LEVEL=SYS /opt/nccl-tests/build/all_reduce_perf"
+    )
 
 
 def test_nccl_runner_handles_missing_binary() -> None:
@@ -43,4 +54,3 @@ def test_nccl_runner_handles_missing_binary() -> None:
 
     assert result.status == "missing_binary"
     assert "not found" in result.error.lower()
-

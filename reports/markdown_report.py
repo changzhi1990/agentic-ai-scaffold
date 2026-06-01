@@ -93,7 +93,8 @@ def write_markdown_report(result: FinalRunResult, output_path: Path) -> Path:
         ["IOMMU Details", ", ".join(inspection.software.iommu_details) or "n/a"],
         ["Environment Keys", len(inspection.environment)],
         ["System Parameters", len(inspection.system_parameters)],
-        ["NCCL Command", result.benchmarks.nccl.command if result.benchmarks.nccl else None],
+        ["NCCL AllReduce Command", result.benchmarks.nccl.command if result.benchmarks.nccl else None],
+        ["NCCL AllToAll Command", result.benchmarks.nccl_alltoall.command if result.benchmarks.nccl_alltoall else None],
         ["NVBandwidth Command", result.benchmarks.nvbandwidth.command if result.benchmarks.nvbandwidth else None],
     ]
     topology_rows = [
@@ -104,6 +105,7 @@ def write_markdown_report(result: FinalRunResult, output_path: Path) -> Path:
     ]
     benchmark_rows = [
         _benchmark_rows(result.benchmarks.nccl),
+        _benchmark_rows(result.benchmarks.nccl_alltoall),
         _benchmark_rows(result.benchmarks.nvbandwidth),
     ]
     warning_rows = [[warning] for warning in dict.fromkeys([*inspection.warnings, *result.warnings])] or [["None"]]

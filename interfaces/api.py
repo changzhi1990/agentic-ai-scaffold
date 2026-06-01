@@ -28,7 +28,11 @@ def inspect() -> dict:
 @api.post("/benchmark/nccl")
 def benchmark_nccl(payload: BenchmarkRequest | None = None) -> dict:
     request = payload or BenchmarkRequest()
-    return _agent().run_nccl(request.profile_name).model_dump(mode="json")
+    agent = _agent()
+    return {
+        "all_reduce": agent.run_nccl(request.profile_name).model_dump(mode="json"),
+        "alltoall": agent.run_nccl_alltoall(request.profile_name).model_dump(mode="json"),
+    }
 
 
 @api.post("/benchmark/nvbandwidth")

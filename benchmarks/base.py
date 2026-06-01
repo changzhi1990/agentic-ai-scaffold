@@ -33,7 +33,7 @@ class BaseBenchmarkRunner(ABC):
                 warnings=[f"{self.benchmark_name} binary not found"],
             )
 
-        command = ShellTool.format_command(config.binary_path, config.args)
+        command = ShellTool.format_command(config.binary_path, config.args, env=config.env)
         parsed_runs = []
         stdout_parts = []
         stderr_parts = []

@@ -147,6 +147,7 @@ class BenchmarkResult(BaseModel):
 
 class BenchmarkSuiteResult(BaseModel):
     nccl: BenchmarkResult | None = None
+    nccl_alltoall: BenchmarkResult | None = None
     nvbandwidth: BenchmarkResult | None = None
 
 
@@ -162,6 +163,7 @@ class BenchmarkProfile(BaseModel):
     name: str = "default"
     enabled: bool = True
     binary_path: str
+    env: dict[str, str] = Field(default_factory=dict)
     args: list[str] = Field(default_factory=list)
     timeout_seconds: int = 60
     repetitions: int = 1

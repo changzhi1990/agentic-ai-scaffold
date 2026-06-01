@@ -15,5 +15,6 @@ app:
     - vm.zone_reclaim_mode
   enable_benchmarks:
     nccl: true
+    nccl_alltoall: true
     nvbandwidth: true
   benchmark_profiles_file: config/benchmark_profiles.yaml

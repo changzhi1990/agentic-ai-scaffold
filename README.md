@@ -20,7 +20,7 @@
 
 - 结构化采集 Linux 系统与 GPU/NIC/PCIe 拓扑信息
 - 自动检测命令是否存在，缺失时降级而非崩溃
-- 执行 NCCL benchmark 和 NVBandwidth benchmark
+- 执行 NCCL allreduce / alltoall benchmark 和 NVBandwidth benchmark
 - 支持 benchmark binary 路径、参数、超时、重复次数配置
 - 生成 JSON 与 Markdown 标准化报告
 - Markdown 报告使用对齐表格，并直接展开命令完整输出
@@ -103,6 +103,18 @@ python3 -m app.main inspect
 python3 -m app.main nccl --profile default
 python3 -m app.main nvbandwidth --profile default
 python3 -m app.main run --output-dir data/reports/manual
+```
+
+默认 `nccl` profile 会执行两类测试：
+
+- `all_reduce_perf`
+- `alltoall_perf`
+
+默认命令参数为全 GPU 压测风格：
+
+```bash
+NCCL_NTHREADS=128 NCCL_MIN_NCHANNELS=8 NCCL_P2P_LEVEL=SYS all_reduce_perf -b 128 -e 8G -f 2 -g 8
+NCCL_NTHREADS=128 NCCL_MIN_NCHANNELS=8 NCCL_P2P_LEVEL=SYS alltoall_perf  -b 128 -e 8G -f 2 -g 8
 ```
 
 ## API

@@ -67,6 +67,9 @@ class ShellTool:
         return run_shell_command(command, timeout=timeout)
 
     @staticmethod
-    def format_command(binary_path: str, args: list[str]) -> str:
-        parts = [shlex.quote(binary_path), *[shlex.quote(arg) for arg in args]]
+    def format_command(binary_path: str, args: list[str], env: dict[str, str] | None = None) -> str:
+        env_parts = []
+        for key, value in sorted((env or {}).items()):
+            env_parts.append(f"{key}={shlex.quote(value)}")
+        parts = [*env_parts, shlex.quote(binary_path), *[shlex.quote(arg) for arg in args]]
         return " ".join(parts)
