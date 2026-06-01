@@ -7,8 +7,10 @@ from app.models import (
     BenchmarkSuiteResult,
     CpuInfo,
     FinalRunResult,
+    GpuInfo,
     InspectionResult,
     NicInfo,
+    NumaNode,
     OperatingSystemInfo,
     PciDeviceInfo,
     SoftwareStack,
@@ -22,8 +24,9 @@ def test_report_generator_writes_json_and_markdown(tmp_path: Path) -> None:
     inspection = InspectionResult(
         status="partial_success",
         cpu=CpuInfo(architecture="x86_64", cpus=64, sockets=2, numa_nodes=2),
+        numa_nodes=[NumaNode(node_id=0, cpus=[0, 1], size_mb=1024)],
         memory=SystemMemoryInfo(total_kb=1000, available_kb=500),
-        gpus=[],
+        gpus=[GpuInfo(index=0, name="NVIDIA H100", pci_bus_id="0000:01:00.0", driver_version="550.54.15", memory_total_mb=81559)],
         nics=[NicInfo(name="eth0", pci_bus_id="0000:81:00.0")],
         pci_devices=[PciDeviceInfo(slot="0000:81:00.0", description="Ethernet controller: Mellanox")],
         software=SoftwareStack(
@@ -43,6 +46,7 @@ def test_report_generator_writes_json_and_markdown(tmp_path: Path) -> None:
         nccl=BenchmarkResult(
             name="nccl",
             status="missing_binary",
+            command="all_reduce_perf -g 8",
             metrics=BenchmarkMetrics(),
             warnings=["binary missing"],
         ),
@@ -50,12 +54,14 @@ def test_report_generator_writes_json_and_markdown(tmp_path: Path) -> None:
             name="nccl_alltoall",
             status="passed",
             testcase="alltoall_perf",
+            command="alltoall_perf -g 8",
             metrics=BenchmarkMetrics(peak_bandwidth_gbps=30.48),
         ),
         nvbandwidth=BenchmarkResult(
             name="nvbandwidth",
             status="passed",
             testcase="device_to_device_memcpy_read_ce",
+            command="nvbandwidth --testcase device_to_device_memcpy_read_ce",
             metrics=BenchmarkMetrics(peak_bandwidth_gbps=312.5),
         ),
     )
@@ -78,13 +84,20 @@ def test_report_generator_writes_json_and_markdown(tmp_path: Path) -> None:
     assert "binary missing" in md_data
     assert "## Execution Summary" in md_data
     assert "## System Inventory" in md_data
+    assert "## NUMA Layout" in md_data
+    assert "## GPU Inventory" in md_data
+    assert "## NIC Inventory" in md_data
     assert "## Configuration Summary" in md_data
+    assert "## Benchmark Commands" in md_data
     assert "## Benchmark Performance" in md_data
     assert "```text" in md_data
     assert "Section        | Value" in md_data
     assert "Benchmark     | Status" in md_data
     assert "nccl_alltoall" in md_data
     assert "device_to_device_memcpy_read_ce" in md_data
+    assert "NVIDIA H100" in md_data
+    assert "eth0" in md_data
+    assert "alltoall_perf -g 8" in md_data
     assert "Command  | Output Line | Content" in md_data
     assert "Architecture: x86_64" in md_data
     assert "collected" not in md_data

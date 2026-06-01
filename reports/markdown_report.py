@@ -59,6 +59,39 @@ def _command_output_rows(command_outputs: dict[str, str]) -> list[list[object]]:
     return rows
 
 
+def _numa_rows(result: FinalRunResult) -> list[list[object]]:
+    if not result.inspection.numa_nodes:
+        return [["n/a", "n/a", "n/a"]]
+    return [
+        [node.node_id, ",".join(str(cpu) for cpu in node.cpus[:8]) + ("..." if len(node.cpus) > 8 else ""), node.size_mb]
+        for node in result.inspection.numa_nodes
+    ]
+
+
+def _gpu_rows(result: FinalRunResult) -> list[list[object]]:
+    if not result.inspection.gpus:
+        return [["n/a", "n/a", "n/a", "n/a", "n/a"]]
+    return [
+        [gpu.index, gpu.name, gpu.pci_bus_id, gpu.driver_version, gpu.memory_total_mb]
+        for gpu in result.inspection.gpus
+    ]
+
+
+def _nic_rows(result: FinalRunResult) -> list[list[object]]:
+    if not result.inspection.nics:
+        return [["n/a", "n/a", "n/a"]]
+    return [[nic.name, nic.pci_bus_id, nic.description] for nic in result.inspection.nics]
+
+
+def _benchmark_command_rows(result: FinalRunResult) -> list[list[object]]:
+    rows = []
+    for item in [result.benchmarks.nccl, result.benchmarks.nccl_alltoall, result.benchmarks.nvbandwidth]:
+        if item is None:
+            continue
+        rows.append([item.name, item.testcase or "n/a", item.command or "n/a"])
+    return rows or [["n/a", "n/a", "n/a"]]
+
+
 def write_markdown_report(result: FinalRunResult, output_path: Path) -> Path:
     inspection = result.inspection
     memory_total_gb = round((inspection.memory.total_kb or 0) / 1024 / 1024, 2) if inspection.memory.total_kb else None
@@ -121,6 +154,18 @@ def write_markdown_report(result: FinalRunResult, output_path: Path) -> Path:
         "",
         _render_table(["Item", "Value"], inventory_rows),
         "",
+        "## NUMA Layout",
+        "",
+        _render_table(["NUMA Node", "CPU Sample", "Size (MB)"], _numa_rows(result)),
+        "",
+        "## GPU Inventory",
+        "",
+        _render_table(["GPU", "Name", "PCI Bus ID", "Driver", "Memory (MB)"], _gpu_rows(result)),
+        "",
+        "## NIC Inventory",
+        "",
+        _render_table(["NIC", "PCI Bus ID", "Description"], _nic_rows(result)),
+        "",
         "## Configuration Summary",
         "",
         _render_table(["Config", "Value"], config_rows),
@@ -128,6 +173,10 @@ def write_markdown_report(result: FinalRunResult, output_path: Path) -> Path:
         "## Topology Summary",
         "",
         _render_table(["Topology", "Value"], topology_rows),
+        "",
+        "## Benchmark Commands",
+        "",
+        _render_table(["Benchmark", "Test Case", "Command"], _benchmark_command_rows(result)),
         "",
         "## Benchmark Performance",
         "",
